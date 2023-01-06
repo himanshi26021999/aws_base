@@ -1,83 +1,59 @@
-resource "aws_vpc" "main" {
-cidr_block = "10.0.0.0/16"
-
-tags = {
-Name = "Project VPC"
-}
+variable "public_subnet_cidrs" {
+  type        = list(string)
+  description = "Public Subnet CIDR values"
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
-# creating public and private subnets across our multiple AZ
-resource "aws_subnet" "public_subnets" {
-count             = length(var.public_subnet_cidrs)
-vpc_id            = aws_vpc.main.id
-cidr_block        = element(var.public_subnet_cidrs, count.index)
-availability_zone = element(var.azs, count.index)
-
-tags = {
-Name = "Public Subnet ${count.index + 1}"
-}
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "Private Subnet CIDR values"
+  default     = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
 }
 
-resource "aws_subnet" "private_subnets" {
-count             = length(var.private_subnet_cidrs)
-vpc_id            = aws_vpc.main.id
-cidr_block        = element(var.private_subnet_cidrs, count.index)
-availability_zone = element(var.azs, count.index)
-
-tags = {
-Name = "Private Subnet ${count.index + 1}"
-}
+variable "azs" {
+  type        = list(string)
+  description = "Availability Zones"
+  default     = ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
 }
 
-# for public subnets, we need to provide access to the internet in the given VPC
-resource "aws_internet_gateway" "gw" {
-vpc_id = aws_vpc.main.id
-
-tags = {
-Name = "Project VPC IG"
-}
+variable "ami" {
+  default = "ami-0a5e707736615003c"
 }
 
-# As a default setting all the subnets are associated implicitly. To change this we create a second route table to explicit public subnet
-resource "aws_route_table" "second_rt" {
-vpc_id = aws_vpc.main.id
-
-route {
-cidr_block = "0.0.0.0/0"
-gateway_id = aws_internet_gateway.gw.id
+variable "s3bucket" {
+  default = "mybucket"
 }
+# Access the ec2 instance remotely to run ansible; user and key:
 
-tags = {
-Name = "2nd Route Table"
+variable "PRIVATE_KEY_PATH" {
+  default = "~/.ssh/aws/mykeypair.pem"
 }
+variable "PUBLIC_KEY_PATH" {
+  default = "aws-key.pub"
 }
-
-# Associating second RT with public subnet
-resource "aws_route_table_association" "public_subnet_asso" {
-count = length(var.public_subnet_cidrs)
-subnet_id      = element(aws_subnet.public_subnets[*].id, count.index)
-route_table_id = aws_route_table.second_rt.id
+variable "EC2_USER" {
+  default = "ubuntu"
 }
 
-# security group for nginx
-resource "aws_security_group" "ssh-allowed" {
-vpc_id = aws_vpc.main.id
-egress {
-from_port   = 0
-to_port     = 0
-protocol    = -1
-cidr_blocks = ["0.0.0.0/0"]
+#RDS credentials
+variable "database_username" {
+  type        = string
+  description = "Name of user inside storage engine"
 }
-ingress {
-from_port = 22
-to_port   = 22
-protocol  = "tcp"
-cidr_blocks = ["0.0.0.0/0"] // Ideally best to use your machines' IP. However if it is dynamic you will need to change this in the vpc every so often.
+
+variable "database_password" {
+  type        = string
+  description = "Database password inside storage engine"
 }
-ingress {
-from_port   = 80
-to_port     = 80
-protocol    = "tcp"
-cidr_blocks = ["0.0.0.0/0"]
+
+variable "database_port" {
+  default     = 5432
+  type        = number
+  description = "Port on which database will accept connections"
 }
+
+variable "allocated_storage" {
+  default     = 32
+  type        = number
+  description = "Storage allocated to database instance"
 }
