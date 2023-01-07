@@ -9,7 +9,7 @@ resource "aws_instance" "nginx_server" {
   # VPC
   subnet_id = aws_subnet.public_subnets.id
   # Security Group
-  vpc_security_group_ids = ["${aws_security_group.ssh-allowed.id}"]
+  vpc_security_group_ids = ["${aws_security_group.ssh-allowed-nginx.id}"]
   # the Public SSH key
   key_name = aws_key_pair.aws-key.id
   # nginx installation

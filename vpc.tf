@@ -64,7 +64,7 @@ resource "aws_db_subnet_group" "db_subnet" {
   subnet_ids = [aws_subnet.private_subnets.id]
 }
 # security group for nginx
-resource "aws_security_group" "ssh-allowed" {
+resource "aws_security_group" "ssh-allowed-nginx" {
   vpc_id = aws_vpc.main.id
   egress {
     from_port   = 0
@@ -98,6 +98,7 @@ resource "aws_security_group" "tomcat" {
     to_port     = 8080
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.ssh-allowed-nginx.id] #to ensure that request is coming from web server only
   }
 
   # ssh access from anywhere
@@ -106,6 +107,7 @@ resource "aws_security_group" "tomcat" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+    security_groups = [aws_security_group.ssh-allowed-nginx.id] #to ensure that request is coming from web server only
   }
 
   # outbound internet access
@@ -114,6 +116,7 @@ resource "aws_security_group" "tomcat" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+
   }
 
   tags {
@@ -125,5 +128,9 @@ resource "aws_security_group" "postgresql" {
   vpc_id = aws_vpc.main.id
   ingress {
     cidr = "10.0.0.0/24"
+    from_port       = 5000
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.tomcat.id] #to ensure that request is coming from app server only
   }
 }
